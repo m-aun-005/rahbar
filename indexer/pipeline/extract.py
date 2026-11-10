@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from html.parser import HTMLParser
 from pathlib import Path
 

@@ -18,7 +18,6 @@ _SENTENCE_PAT = re.compile(r"(?<=[.!?])\s+(?=[A-Z0-9])")
 
 def _approx_tokens(text: str) -> int:
     """Approximates token count using character/word heuristic (1 token ~= 4 chars or 0.75 words)."""
-    words = text.split()
     return max(1, int(len(text) / 4)) if len(text) > 0 else 0
 
 
