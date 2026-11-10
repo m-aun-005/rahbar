@@ -115,7 +115,7 @@ jobs:
           tags: rahbar-ui:${{ github.sha }}
 
       - name: Scan API image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: rahbar-api:${{ github.sha }}
           format: "table"
@@ -124,7 +124,7 @@ jobs:
           severity: "HIGH,CRITICAL"
 
       - name: Scan indexer image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: rahbar-indexer:${{ github.sha }}
           format: "table"
@@ -133,7 +133,7 @@ jobs:
           severity: "HIGH,CRITICAL"
 
       - name: Scan UI image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: rahbar-ui:${{ github.sha }}
           format: "table"
