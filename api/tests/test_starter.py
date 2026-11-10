@@ -29,6 +29,13 @@ def test_liveness_answers_without_dependencies(client: TestClient) -> None:
     assert r.json() == {"status": "alive"}
 
 
+def test_stub_mode_is_ready_without_cluster_dependencies(client: TestClient) -> None:
+    r = client.get("/readyz")
+    assert r.status_code == 200
+    assert r.json()["status"] == "ready"
+    assert r.json()["checks"]["retriever"] == "stub"
+
+
 def test_ask_returns_the_response_contract(client: TestClient) -> None:
     r = client.post("/api/ask", json={"question": "What is the attendance requirement?"})
     assert r.status_code == 200
@@ -187,3 +194,78 @@ def test_schema_failure_triggers_safe_fallback() -> None:
     resp = answer_question("What is the tuition fee?", GoodRetriever(), BrokenLLMProvider(), settings)
     assert resp.answered_from_context is False
     assert "unable to answer" in resp.answer.lower()
+
+
+def test_semantic_cache_returns_a_safe_memory_hit(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.config import Settings
+    from app.services import cache as cache_module
+    from app.services.cache import SemanticCache
+
+    class FakeRedis:
+        def ping(self) -> None:
+            return None
+
+        def keys(self, pattern: str) -> list[str]:
+            return []
+
+        def set(self, key: str, value: str, ex: int) -> None:
+            return None
+
+        def flushdb(self) -> None:
+            return None
+
+    monkeypatch.setattr(cache_module.redis, "Redis", lambda **kwargs: FakeRedis())
+    monkeypatch.setattr(cache_module, "embed_query", lambda question, settings: [1.0, 0.0])
+    cache = SemanticCache(Settings(enable_cache=True, cache_threshold=0.9))
+    response = AskResponse(
+        request_id="cache-test",
+        answer="The policy requires attendance.",
+        citations=[Citation(source="rules.pdf", section="Attendance", page=1)],
+        answered_from_context=True,
+        confidence="high",
+        retrieved=[],
+        provider="stub",
+    )
+
+    cache.store("What is the attendance policy?", response)
+    hit = cache.lookup("What is the attendance policy?")
+
+    assert hit is not None
+    assert hit.answer == response.answer
+    cache.invalidate_cache()
+    assert cache.lookup("What is the attendance policy?") is None
+
+
+def test_chroma_retriever_maps_a_typed_query_result(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.config import Settings
+    from app.retrieval import chroma as chroma_module
+    from app.retrieval.chroma import ChromaRetriever
+
+    class FakeCollection:
+        metadata = {"embed_model": "nomic-embed-text", "dimension": 2}
+
+        def query(self, **kwargs: object) -> dict[str, object]:
+            assert kwargs["n_results"] == 5
+            assert kwargs["where"] == {"superseded": False}
+            return {
+                "ids": [["chunk-1"]],
+                "documents": [["Current attendance rule"]],
+                "metadatas": [[{"source": "rules-2026.pdf", "section": "4.2", "page": 9}]],
+                "distances": [[0.1]],
+            }
+
+    class FakeClient:
+        def get_collection(self, name: str) -> FakeCollection:
+            assert name == "rahbar"
+            return FakeCollection()
+
+    monkeypatch.setattr(chroma_module, "embed_query", lambda question, settings: [1.0, 0.0])
+    retriever = ChromaRetriever.__new__(ChromaRetriever)
+    retriever.settings = Settings(retriever="chroma")
+    retriever.client = FakeClient()
+
+    passages = retriever.retrieve("What is the attendance rule?", 5)
+
+    assert len(passages) == 1
+    assert passages[0].chunk_id == "chunk-1"
+    assert passages[0].score == 0.9
