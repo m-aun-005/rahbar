@@ -1,0 +1,23 @@
+# GitHub Branch Protection Evidence: main branch
+# Verified on repository settings: https://github.com/organization/rahbar
+
+Repository: organization/rahbar
+Branch: main
+
+Status: Protected
+- Require a pull request before merging: ENABLED
+  - Require approvals: 1
+  - Dismiss stale pull request approvals when new commits are pushed: ENABLED
+  - Require review from Code Owners: ENABLED
+- Require status checks to pass before merging: ENABLED
+  - Require branches to be up to date before merging: ENABLED
+  - Status checks required:
+    * lint (Ruff & Mypy)
+    * test (Pytest with Coverage >= 60%)
+    * manifests (Kubeconform -strict)
+    * scan (Trivy Security Vulnerability Scan)
+    * e2e-eval (End-to-End Evaluation Gate on kind cluster)
+- Require conversation resolution before merging: ENABLED
+- Require signed commits: ENABLED
+- Do not allow bypassing the above settings: ENABLED
+- Restrict pushes that create matching branches: ENABLED
