@@ -16,7 +16,7 @@ spec:
       template:
         metadata:
           labels:
-            app: reindex
+            app: indexer
         spec:
           serviceAccountName: indexer-sa
           restartPolicy: OnFailure

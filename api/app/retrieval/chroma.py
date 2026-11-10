@@ -15,13 +15,11 @@ log = logging.getLogger("rahbar.retrieval.chroma")
 
 
 def _fallback_vector(text: str, dim: int = 768) -> list[float]:
-    """Deterministic normalized pseudo-embedding for testing or when model host is offline."""
-    values: list[float] = []
-    seed = text.encode("utf-8")
-    while len(values) < dim:
-        seed = hashlib.sha256(seed).digest()
-        values.extend((b - 127.5) / 127.5 for b in seed)
-    values = values[:dim]
+    """Deterministic lexical fallback for offline CI when no embedding host is available."""
+    values = [0.0] * dim
+    for token in text.lower().split():
+        slot = int.from_bytes(hashlib.sha256(token.encode("utf-8")).digest()[:4], "big") % dim
+        values[slot] += 1.0
     norm = math.sqrt(sum(v * v for v in values)) or 1.0
     return [v / norm for v in values]
 

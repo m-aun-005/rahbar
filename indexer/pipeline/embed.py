@@ -11,13 +11,11 @@ DEFAULT_DIMENSION = 768
 
 
 def _fallback_vector(text: str, dim: int = DEFAULT_DIMENSION) -> list[float]:
-    """Deterministic normalized pseudo-embedding used when model endpoint is unreachable."""
-    values: list[float] = []
-    seed = text.encode("utf-8")
-    while len(values) < dim:
-        seed = hashlib.sha256(seed).digest()
-        values.extend((b - 127.5) / 127.5 for b in seed)
-    values = values[:dim]
+    """Deterministic lexical fallback for offline CI when no embedding host is available."""
+    values = [0.0] * dim
+    for token in text.lower().split():
+        slot = int.from_bytes(hashlib.sha256(token.encode("utf-8")).digest()[:4], "big") % dim
+        values[slot] += 1.0
     norm = math.sqrt(sum(v * v for v in values)) or 1.0
     return [v / norm for v in values]
 

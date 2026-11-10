@@ -1,0 +1,25 @@
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+RUN apt-get update && \
+    apt-get upgrade -y --no-install-recommends && \
+    apt-get install -y --no-install-recommends tesseract-ocr poppler-utils && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN groupadd -g 10002 indexergroup && \
+    useradd -u 10002 -g indexergroup -s /sbin/nologin -M indexer
+
+COPY indexer/requirements.txt ./requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY indexer/pipeline/ ./pipeline/
+COPY eval/fixtures/ /fixtures/
+
+RUN mkdir -p /tmp/indexer && chown -R indexer:indexergroup /app /fixtures /tmp/indexer
+USER indexer
+
+CMD ["python", "-m", "pipeline.run"]
