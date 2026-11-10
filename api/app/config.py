@@ -19,11 +19,18 @@ def _float(name: str, default: float) -> float:
     return float(os.environ.get(name, default))
 
 
+def _bool(name: str, default: bool) -> bool:
+    val = os.environ.get(name)
+    if val is None:
+        return default
+    return val.strip().lower() in ("1", "true", "yes", "on")
+
+
 @dataclass(frozen=True)
 class Settings:
     # Which implementations to load. "stub" needs no cluster, no model, no network.
-    retriever: str = "stub"          # RETRIEVER: stub | chroma
-    llm_provider: str = "stub"       # LLM_PROVIDER: stub | ollama-host | ollama-incluster | hosted
+    retriever: str = "stub"  # RETRIEVER: stub | chroma
+    llm_provider: str = "stub"  # LLM_PROVIDER: stub | ollama-host | ollama-incluster | hosted
 
     # The embedding pin (section 4.4). The indexer reads the same ConfigMap key.
     embed_model: str = "nomic-embed-text"
@@ -38,8 +45,16 @@ class Settings:
     temperature: float = 0.2
     llm_model: str = "llama3.2:3b"
     ollama_url: str = "http://host.minikube.internal:11434"
-    hosted_base_url: str = ""        # e.g. an OpenAI-compatible endpoint
-    llm_api_key: str = field(default="", repr=False)   # from the Secret; never log it
+    hosted_base_url: str = ""  # e.g. an OpenAI-compatible endpoint
+    llm_api_key: str = field(default="", repr=False)  # from the Secret; never log it
+
+    # Reliability and guardrails (sections 3.2, 3.3, 3.4)
+    relevance_floor: float = 0.35
+    cache_threshold: float = 0.90
+    redis_host: str = "redis"
+    redis_port: int = 6379
+    enable_cache: bool = True
+    llm_timeout: float = 30.0
 
     log_level: str = "INFO"
 
@@ -58,5 +73,11 @@ def get_settings() -> Settings:
         ollama_url=os.environ.get("OLLAMA_URL", "http://host.minikube.internal:11434"),
         hosted_base_url=os.environ.get("HOSTED_BASE_URL", ""),
         llm_api_key=os.environ.get("LLM_API_KEY", ""),
+        relevance_floor=_float("RELEVANCE_FLOOR", 0.35),
+        cache_threshold=_float("CACHE_THRESHOLD", 0.90),
+        redis_host=os.environ.get("REDIS_HOST", "redis"),
+        redis_port=_int("REDIS_PORT", 6379),
+        enable_cache=_bool("ENABLE_CACHE", True),
+        llm_timeout=_float("LLM_TIMEOUT", 30.0),
         log_level=os.environ.get("LOG_LEVEL", "INFO"),
     )
