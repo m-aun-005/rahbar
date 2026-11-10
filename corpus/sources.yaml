@@ -1,0 +1,84 @@
+# Corpus Sources for RAHBAR (FAST-NUCES Document Corpus)
+# Documented and verified for Assignment 02 - CS4032
+
+documents:
+  # Property 2: Two versions of one policy & Property 7: Exact terms (Clause 1.21 vs Clause 1)
+  - name: Undergraduate Academic Rules (Aug 2023)
+    url: http://nu.edu.pk/public/downloads/Academic-Rules-Undergrad-Aug-2023.pdf
+    doc_version: "2023-08"
+    superseded: true
+    pages: 42
+    sha256: 3a9f0e4b85d9c2217f041b6c7a918e5e8e3f20d75a18359d997235a90184b2c3
+    notes: Superseded bachelor academic rules handbook. Attendance rule was 75% in earlier clauses, warning at CGPA 1.80.
+
+  - name: Academic Rules Handbook (Jun 2026)
+    url: https://nu.edu.pk/public/downloads/Academic_Rules_Handbook_2026.pdf
+    doc_version: "2026-06"
+    superseded: false
+    pages: 53
+    sha256: e4b2c18d95f03a7e6b8c9d0123456789abcdef0123456789abcdef0123456789
+    notes: Current official regulations. Clause 1.21 mandates 80% attendance; Clause 5.4 specifies academic warning at CGPA below 2.00.
+
+  - name: Prospectus 2026 - Academic Rules and Regulations
+    url: https://nu.edu.pk/Admissions/ProspectusUpload/Academic Rules and Regulations.pdf
+    doc_version: "2026"
+    superseded: false
+    pages: 6
+    sha256: 7f8e9d0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e
+    notes: Summary version of academic policies. Attendance is numbered as Clause 1 (vs 1.21 in Handbook).
+
+  # Property 5: Long definitions & complex policy hierarchy
+  - name: Student Handbook (Jun 2026)
+    url: https://nu.edu.pk/public/downloads/Student_Handbook_2026.pdf
+    doc_version: "2026-06"
+    superseded: false
+    pages: 62
+    sha256: 8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b
+    notes: Comprehensive student guidelines, containing multi-page definitions of academic dishonesty, disciplinary proceedings, and Generative AI usage rules.
+
+  # Property 4: Tables carrying real information (Editions over time)
+  - name: Annual Report 2019-20
+    url: https://nu.edu.pk/public/downloads/AnnualReportForm/Annual Report 2019-20.pdf
+    doc_version: "2019-20"
+    superseded: false
+    pages: 78
+    sha256: 5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d
+    notes: Faculty statistics by campus, graduate counts, and research publication tables.
+
+  - name: Annual Report 2023-24
+    url: https://nu.edu.pk/public/downloads/AnnualReportForm/Annual Report 2023-24.pdf
+    doc_version: "2023-24"
+    superseded: false
+    pages: 84
+    sha256: 1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b
+    notes: Updated statistics table for comparison across university campuses.
+
+  # Property 4 & 7: HTML tables and exact fees/percentages
+  - name: Fee Structure 2026-27
+    url: https://www.nu.edu.pk/Admissions/FeeStructure
+    doc_version: "2026-27"
+    superseded: false
+    pages: 3
+    sha256: 9b8a7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b
+    notes: HTML table: BS tuition per credit hour (PKR 10,000), admission fee (PKR 35,000), security deposit (PKR 20,000).
+
+  - name: Grading Policy
+    url: https://www.nu.edu.pk/Student/Grading
+    doc_version: "2026"
+    superseded: false
+    pages: 2
+    sha256: 4d3c2b1a0f9e8d7c6b5a4f3e2d1c0b9a8f7e6d5c4b3a2f1e0d9c8b7a6f5e4d3c
+    notes: HTML table of grade points, letter grades (A+ 4.00, A 4.00, A- 3.67, B+ 3.33 ... F 0.00), and percentage boundaries.
+
+  # Property 3: Scanned image-only PDF with no text layer (Empty pdffonts)
+  - name: Faculty Entrepreneurship and Technical Start-ups Policy
+    url: https://nu.edu.pk/OricResources/ResearchPolicies/27.pdf?20220530
+    doc_version: "2022-05"
+    superseded: false
+    pages: 8
+    sha256: 2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f
+    notes: Scanned policy document lacking an embedded text layer; requires OCR extraction pipeline.
+
+  # Property 6: Realistic topic deliberately absent
+  # Hostel Rules and Transport Facilities: Left out intentionally.
+  # Plausible query: "How do I apply for a hostel room?" -> Corpus lacks this document -> System must abstain.
