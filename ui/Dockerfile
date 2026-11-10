@@ -2,6 +2,7 @@
 FROM nginxinc/nginx-unprivileged:1.27-alpine
 
 # Apply available Alpine security fixes in the pinned base image.
+USER root
 RUN apk upgrade --no-cache
 
 # Copy custom nginx configuration for non-root execution (listening on 8080)
