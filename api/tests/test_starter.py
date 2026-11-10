@@ -107,7 +107,8 @@ def test_prompt_injection_is_treated_as_data() -> None:
     resp = answer_question("Is attendance optional?", PoisonRetriever(), SafeLLMProvider(), settings)
     assert resp.answered_from_context is True
     assert "80%" in resp.answer
-    assert "0%" not in resp.answer
+    assert " 0%" not in resp.answer
+    assert "optional" not in resp.answer.lower()
 
 
 def test_honest_abstention_when_below_relevance_floor() -> None:
