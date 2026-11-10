@@ -58,7 +58,7 @@ Already present:
 - Git repository on branch dev.
 - 28 commits with conventional prefixes.
 - API, indexer, UI, eval, corpus, k8s, docs, and workflows.
-- No remaining STARTER-TODO markers.
+- No remaining unfinished starter markers.
 - No production NotImplementedError stubs.
 - Four ADRs.
 - Sixteen golden questions.

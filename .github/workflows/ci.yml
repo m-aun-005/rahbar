@@ -95,6 +95,7 @@ jobs:
         with:
           context: api
           push: false
+          load: true
           tags: rahbar-api:${{ github.sha }}
 
       - name: Build Indexer image
@@ -102,6 +103,7 @@ jobs:
         with:
           context: indexer
           push: false
+          load: true
           tags: rahbar-indexer:${{ github.sha }}
 
       - name: Build UI image
@@ -109,22 +111,33 @@ jobs:
         with:
           context: ui
           push: false
+          load: true
           tags: rahbar-ui:${{ github.sha }}
 
-  scan:
-    name: Security Vulnerability Scan
-    needs: [build]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run Trivy vulnerability scan on API
+      - name: Scan API image
         uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: rahbar-api:${{ github.sha }}
           format: "table"
-          exit-code: "0"
+          exit-code: "1"
+          ignore-unfixed: true
+          severity: "HIGH,CRITICAL"
+
+      - name: Scan indexer image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: rahbar-indexer:${{ github.sha }}
+          format: "table"
+          exit-code: "1"
+          ignore-unfixed: true
+          severity: "HIGH,CRITICAL"
+
+      - name: Scan UI image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: rahbar-ui:${{ github.sha }}
+          format: "table"
+          exit-code: "1"
           ignore-unfixed: true
           severity: "HIGH,CRITICAL"
 
@@ -153,12 +166,12 @@ jobs:
 
       - name: Build and load local images
         run: |
-          docker build -t rahbar-api:${{ github.sha }} api
-          docker build -t rahbar-indexer:${{ github.sha }} indexer
-          docker build -t rahbar-ui:${{ github.sha }} ui
-          kind load docker-image rahbar-api:${{ github.sha }} --name rahbar-eval-cluster
-          kind load docker-image rahbar-indexer:${{ github.sha }} --name rahbar-eval-cluster
-          kind load docker-image rahbar-ui:${{ github.sha }} --name rahbar-eval-cluster
+          docker build -t rahbar-api:dev api
+          docker build -t rahbar-indexer:dev indexer
+          docker build -t rahbar-ui:dev ui
+          kind load docker-image rahbar-api:dev --name rahbar-eval-cluster
+          kind load docker-image rahbar-indexer:dev --name rahbar-eval-cluster
+          kind load docker-image rahbar-ui:dev --name rahbar-eval-cluster
 
       - name: Apply Kubernetes manifests
         run: |
@@ -167,17 +180,17 @@ jobs:
       - name: Run indexer Job on fixture corpus
         run: |
           # Index the CI fixtures directory
-          kubectl set env job/indexer CORPUS_DIR=eval/fixtures -n rahbar || true
-          kubectl create job --from=cronjob/reindex ci-fixture-index -n rahbar
+          kubectl set env cronjob/dev-reindex CORPUS_DIR=eval/fixtures -n rahbar
+          kubectl create job --from=cronjob/dev-reindex ci-fixture-index -n rahbar
           kubectl wait --for=condition=complete job/ci-fixture-index -n rahbar --timeout=180s
 
       - name: Wait for API rollout status
         run: |
-          kubectl rollout status deployment/api -n rahbar --timeout=120s
+          kubectl rollout status deployment/dev-api -n rahbar --timeout=120s
 
       - name: Run eval gate
         run: |
           # Port-forward and execute the evaluation harness
-          kubectl port-forward svc/api -n rahbar 8000:8000 &
+          kubectl port-forward svc/dev-api -n rahbar 8000:8000 &
           sleep 5
           python eval/run_eval.py --api http://localhost:8000 --golden eval/fixtures/golden.fixture.yaml
