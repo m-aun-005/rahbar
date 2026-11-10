@@ -185,7 +185,13 @@ jobs:
 
       - name: Run indexer Job on fixture corpus
         run: |
-          kubectl rollout status statefulset/dev-chroma -n rahbar --timeout=120s
+          if ! kubectl rollout status statefulset/dev-chroma -n rahbar --timeout=120s; then
+            kubectl get pods -n rahbar -o wide
+            kubectl describe pod/dev-chroma-0 -n rahbar
+            kubectl logs pod/dev-chroma-0 -n rahbar --previous || true
+            kubectl logs pod/dev-chroma-0 -n rahbar || true
+            exit 1
+          fi
           kubectl rollout status deployment/dev-redis -n rahbar --timeout=120s
           kubectl patch configmap dev-rahbar-config -n rahbar --type merge -p \
             '{"data":{"CHROMA_HOST":"dev-chroma","REDIS_HOST":"dev-redis","LLM_PROVIDER":"stub","CORPUS_DIR":"/fixtures","RELEVANCE_FLOOR":"0.01"}}'

@@ -26,13 +26,6 @@ spec:
         - name: chroma
           image: chromadb/chroma:1.0.12
           imagePullPolicy: IfNotPresent
-          env:
-            - name: IS_PERSISTENT
-              value: "TRUE"
-            - name: PERSIST_DIRECTORY
-              value: "/chroma/chroma"
-            - name: ANONYMIZED_TELEMETRY
-              value: "FALSE"
           ports:
             - name: http
               containerPort: 8000
@@ -51,7 +44,7 @@ spec:
                 - ALL
           volumeMounts:
             - name: chroma-data
-              mountPath: /chroma/chroma
+              mountPath: /data
   volumeClaimTemplates:
     - metadata:
         name: chroma-data
