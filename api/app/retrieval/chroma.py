@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import math
-from typing import Any
+from typing import Any, cast
 import httpx
 
 from ..config import Settings
@@ -96,17 +96,20 @@ class ChromaRetriever:
             where_filter = {"superseded": False}
 
         results = collection.query(
-            query_embeddings=[query_vector],
+            # chromadb-client's stubs accept a sequence of floats at runtime but
+            # express the vector union narrowly, so retain the concrete vector
+            # type and cast only at the third-party API boundary.
+            query_embeddings=cast(Any, [query_vector]),
             n_results=k,
             where=where_filter,
             include=["documents", "metadatas", "distances"],
         )
 
         passages: list[Passage] = []
-        ids = results.get("ids", [[]])[0]
-        docs = results.get("documents", [[]])[0]
-        metas = results.get("metadatas", [[]])[0]
-        distances = results.get("distances", [[]])[0]
+        ids = (results.get("ids") or [[]])[0]
+        docs = (results.get("documents") or [[]])[0]
+        metas = (results.get("metadatas") or [[]])[0]
+        distances = (results.get("distances") or [[]])[0]
 
         for chunk_id, text, meta, dist in zip(ids, docs, metas, distances):
             meta = meta or {}
