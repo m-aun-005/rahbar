@@ -122,6 +122,8 @@ jobs:
           exit-code: "1"
           ignore-unfixed: true
           severity: "HIGH,CRITICAL"
+        env:
+          TRIVY_SKIP_VERSION_CHECK: "true"
 
       - name: Scan indexer image
         uses: aquasecurity/trivy-action@v0.36.0
@@ -131,6 +133,8 @@ jobs:
           exit-code: "1"
           ignore-unfixed: true
           severity: "HIGH,CRITICAL"
+        env:
+          TRIVY_SKIP_VERSION_CHECK: "true"
 
       - name: Scan UI image
         uses: aquasecurity/trivy-action@v0.36.0
@@ -140,6 +144,8 @@ jobs:
           exit-code: "1"
           ignore-unfixed: true
           severity: "HIGH,CRITICAL"
+        env:
+          TRIVY_SKIP_VERSION_CHECK: "true"
 
   e2e-eval:
     name: End-to-End Evaluation Gate
