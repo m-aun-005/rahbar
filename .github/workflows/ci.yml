@@ -195,12 +195,17 @@ jobs:
           kubectl rollout status deployment/dev-redis -n rahbar --timeout=120s
           kubectl patch configmap dev-rahbar-config -n rahbar --type merge -p \
             '{"data":{"CHROMA_HOST":"dev-chroma","REDIS_HOST":"dev-redis","LLM_PROVIDER":"stub","CORPUS_DIR":"/fixtures","RELEVANCE_FLOOR":"0.01"}}'
+          kubectl patch cronjob dev-reindex -n rahbar --type merge -p \
+            '{"spec":{"jobTemplate":{"spec":{"backoffLimit":0,"template":{"spec":{"restartPolicy":"Never"}}}}}}'
           kubectl set image cronjob/dev-reindex indexer=rahbar-indexer:ci -n rahbar
           kubectl create job --from=cronjob/dev-reindex ci-fixture-index -n rahbar
           if ! kubectl wait --for=condition=complete job/ci-fixture-index -n rahbar --timeout=180s; then
             kubectl get pods,jobs -n rahbar -o wide
             kubectl describe job/ci-fixture-index -n rahbar
-            kubectl logs job/ci-fixture-index -n rahbar --all-containers=true || true
+            kubectl get pods -n rahbar -l job-name=ci-fixture-index -o name \
+              | xargs -r -n1 kubectl logs -n rahbar --all-containers=true || true
+            kubectl get pods -n rahbar -l job-name=ci-fixture-index -o name \
+              | xargs -r -n1 kubectl describe -n rahbar
             exit 1
           fi
           kubectl rollout restart deployment/dev-api -n rahbar
