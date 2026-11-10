@@ -194,7 +194,7 @@ jobs:
           fi
           kubectl rollout status deployment/dev-redis -n rahbar --timeout=120s
           kubectl patch configmap dev-rahbar-config -n rahbar --type merge -p \
-            '{"data":{"CHROMA_HOST":"dev-chroma","REDIS_HOST":"dev-redis","LLM_PROVIDER":"stub","CORPUS_DIR":"/fixtures","RELEVANCE_FLOOR":"0.01"}}'
+            '{"data":{"CHROMA_HOST":"dev-chroma","REDIS_HOST":"dev-redis","LLM_PROVIDER":"stub","CORPUS_DIR":"/fixtures","RELEVANCE_FLOOR":"0.20"}}'
           kubectl patch cronjob dev-reindex -n rahbar --type merge -p \
             '{"spec":{"jobTemplate":{"spec":{"backoffLimit":0,"template":{"spec":{"restartPolicy":"Never"}}}}}}'
           kubectl set image cronjob/dev-reindex indexer=rahbar-indexer:ci -n rahbar
@@ -219,4 +219,7 @@ jobs:
           # Port-forward and execute the evaluation harness
           kubectl port-forward svc/dev-api -n rahbar 8000:8000 &
           sleep 5
-          python eval/run_eval.py --api http://localhost:8000 --golden eval/fixtures/golden.fixture.yaml
+          python eval/run_eval.py --api http://localhost:8000 \
+            --golden eval/fixtures/golden.fixture.yaml \
+            --baseline eval/fixtures/baseline.fixture.json \
+            --out /tmp/rahbar-fixture-results.json

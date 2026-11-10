@@ -4,16 +4,38 @@ from __future__ import annotations
 
 import hashlib
 import math
+import re
 import httpx
 from .config import IndexerSettings
 
 DEFAULT_DIMENSION = 768
+_TOKEN_PAT = re.compile(r"[a-z0-9]+")
+_STOP_WORDS = {
+    "a", "an", "and", "are", "at", "be", "do", "for", "how", "i", "if",
+    "in", "is", "it", "of", "on", "or", "the", "to", "what", "when", "with",
+}
+
+
+def _tokens(text: str) -> list[str]:
+    """Normalise simple lexical terms used by the offline CI embedding."""
+    result: list[str] = []
+    for token in _TOKEN_PAT.findall(text.lower()):
+        if token in _STOP_WORDS:
+            continue
+        if len(token) > 5 and token.endswith("ing"):
+            token = token[:-3]
+        elif len(token) > 4 and token.endswith("ed"):
+            token = token[:-2]
+        elif len(token) > 4 and token.endswith("s"):
+            token = token[:-1]
+        result.append(token)
+    return result
 
 
 def _fallback_vector(text: str, dim: int = DEFAULT_DIMENSION) -> list[float]:
     """Deterministic lexical fallback for offline CI when no embedding host is available."""
     values = [0.0] * dim
-    for token in text.lower().split():
+    for token in _tokens(text):
         slot = int.from_bytes(hashlib.sha256(token.encode("utf-8")).digest()[:4], "big") % dim
         values[slot] += 1.0
     norm = math.sqrt(sum(v * v for v in values)) or 1.0

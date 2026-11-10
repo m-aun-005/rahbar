@@ -8,7 +8,7 @@ from .models import Chunk, Document
 
 # Heading and section boundaries pattern
 _HEADING_PAT = re.compile(
-    r"^(?:#{1,6}\s+.+|(?:\d+\.){1,3}\d*\s+[A-Z].+|Clause\s+\d+(?:\.\d+)*.*|Section\s+\d+.*)$",
+    r"^(?:#{1,6}\s+.+|(?:\d+\.){1,3}\d*\s+[A-Z][^.!?]*|Clause\s+\d+(?:\.\d+)*[^.!?]*|Section\s+\d+[^.!?]*)$",
     re.MULTILINE,
 )
 
@@ -87,7 +87,10 @@ def _create_chunks_with_overlap(
         unit_tokens = _approx_tokens(unit)
         if current_tokens + unit_tokens > target_size and current_units:
             # Emit current chunk
-            chunk_text = "\n\n".join(current_units)
+            # Include the section heading in the indexed text.  It is valuable
+            # retrieval context (for example, a query for "academic warning")
+            # and remains visible to the answer generator.
+            chunk_text = f"{section_name}\n\n" + "\n\n".join(current_units)
             chunk_hash = hashlib.sha256(
                 f"{source}:{section_name}:{page_num}:{chunk_idx}".encode()
             ).hexdigest()[:12]
@@ -124,7 +127,7 @@ def _create_chunks_with_overlap(
         current_tokens += unit_tokens
 
     if current_units:
-        chunk_text = "\n\n".join(current_units)
+        chunk_text = f"{section_name}\n\n" + "\n\n".join(current_units)
         chunk_hash = hashlib.sha256(
             f"{source}:{section_name}:{page_num}:{chunk_idx}".encode()
         ).hexdigest()[:12]
