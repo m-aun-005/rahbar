@@ -8,6 +8,7 @@ WORKDIR /app
 
 # Install system libraries required for OCR (tesseract-ocr) and PDF image rasterization (poppler-utils)
 RUN apt-get update && \
+    apt-get upgrade -y --no-install-recommends && \
     apt-get install -y --no-install-recommends \
         tesseract-ocr \
         poppler-utils \
