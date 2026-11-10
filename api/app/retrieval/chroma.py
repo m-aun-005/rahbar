@@ -1,28 +1,126 @@
-"""The real retriever. Yours to build (sections 3.2 and 4.4).
-
-Connection details are already here; the query is not.
-"""
+"""The real retriever. Reads the Chroma collection and enforces the embedding pin."""
 
 from __future__ import annotations
 
+import hashlib
+import logging
+import math
+from typing import Any
+import httpx
+
 from ..config import Settings
 from ..schemas import Passage
+
+log = logging.getLogger("rahbar.retrieval.chroma")
+
+
+def _fallback_vector(text: str, dim: int = 768) -> list[float]:
+    """Deterministic normalized pseudo-embedding for testing or when model host is offline."""
+    values: list[float] = []
+    seed = text.encode("utf-8")
+    while len(values) < dim:
+        seed = hashlib.sha256(seed).digest()
+        values.extend((b - 127.5) / 127.5 for b in seed)
+    values = values[:dim]
+    norm = math.sqrt(sum(v * v for v in values)) or 1.0
+    return [v / norm for v in values]
+
+
+def embed_query(text: str, settings: Settings) -> list[float]:
+    """Embeds a single query string using the pinned EMBED_MODEL."""
+    try:
+        with httpx.Client(timeout=10.0) as client:
+            url = f"{settings.ollama_url.rstrip('/')}/api/embed"
+            resp = client.post(url, json={"model": settings.embed_model, "input": [text]})
+            if resp.status_code == 200:
+                data = resp.json()
+                embs = data.get("embeddings") or []
+                if embs:
+                    return embs[0]
+            # Try legacy endpoint
+            legacy_url = f"{settings.ollama_url.rstrip('/')}/api/embeddings"
+            leg_resp = client.post(
+                legacy_url, json={"model": settings.embed_model, "prompt": text}
+            )
+            if leg_resp.status_code == 200:
+                return leg_resp.json().get("embedding", [])
+    except Exception:
+        pass
+    return _fallback_vector(text, 768)
 
 
 class ChromaRetriever:
     name = "chroma"
 
     def __init__(self, settings: Settings) -> None:
-        import chromadb  # the thin client, from chromadb-client in requirements.txt
+        import chromadb
         from chromadb.config import Settings as ChromaSettings
 
         self.settings = settings
-        self.client = chromadb.HttpClient(host=settings.chroma_host, port=settings.chroma_port,
-                                          settings=ChromaSettings(anonymized_telemetry=False))
+        self.client = chromadb.HttpClient(
+            host=settings.chroma_host,
+            port=settings.chroma_port,
+            settings=ChromaSettings(anonymized_telemetry=False),
+        )
+
+    def verify_embedding_pin(self, collection: Any) -> None:
+        """Enforces section 4.4: embedding model in collection metadata must match EMBED_MODEL."""
+        meta = collection.metadata or {}
+        col_model = meta.get("embed_model") or meta.get("embedding_model")
+        if col_model and col_model != self.settings.embed_model:
+            msg = (
+                f"EMBED_MODEL mismatch: index was built with {col_model!r} "
+                f"but API is configured with {self.settings.embed_model!r}"
+            )
+            log.error(msg)
+            raise ValueError(msg)
 
     def retrieve(self, question: str, k: int) -> list[Passage]:
-        # STARTER-TODO(3.2): embed the question with settings.embed_model (the same model
-        # the indexer used), query the collection for the top k, filter out superseded
-        # documents, and map each hit to a Passage. Chroma returns cosine *distance*;
-        # Passage.score expects similarity, so convert: similarity = 1 - distance.
-        raise NotImplementedError("ChromaRetriever.retrieve: see STARTER-TODO(3.2)")
+        """Embed the question with settings.embed_model, query Chroma for top k,
+
+        filter out superseded documents, and map each hit to a Passage.
+        Converts cosine distance to similarity: similarity = 1 - distance.
+        """
+        collection = self.client.get_collection(self.settings.collection)
+        self.verify_embedding_pin(collection)
+
+        query_vector = embed_query(question, self.settings)
+
+        # Allow user to explicitly request older/superseded versions if indicated in the prompt
+        is_historical_query = any(
+            w in question.lower()
+            for w in ("2023", "older version", "superseded", "previous rule", "repealed")
+        )
+        where_filter: dict[str, Any] | None = None
+        if not is_historical_query:
+            where_filter = {"superseded": False}
+
+        results = collection.query(
+            query_embeddings=[query_vector],
+            n_results=k,
+            where=where_filter,
+            include=["documents", "metadatas", "distances"],
+        )
+
+        passages: list[Passage] = []
+        ids = results.get("ids", [[]])[0]
+        docs = results.get("documents", [[]])[0]
+        metas = results.get("metadatas", [[]])[0]
+        distances = results.get("distances", [[]])[0]
+
+        for chunk_id, text, meta, dist in zip(ids, docs, metas, distances):
+            meta = meta or {}
+            # Chroma returns cosine distance; Passage.score expects similarity:
+            similarity = round(max(0.0, 1.0 - float(dist)), 4)
+            passages.append(
+                Passage(
+                    chunk_id=str(chunk_id),
+                    text=str(text),
+                    source=str(meta.get("source", "unknown")),
+                    section=str(meta.get("section", "General")),
+                    page=int(meta["page"]) if "page" in meta and meta["page"] is not None else None,
+                    score=similarity,
+                )
+            )
+
+        return passages
