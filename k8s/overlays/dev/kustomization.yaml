@@ -15,4 +15,17 @@ patches:
     patch: |-
       - op: replace
         path: /spec/replicas
-        value: 3
+        value: 1
+  - target:
+      kind: ConfigMap
+      name: rahbar-config
+    patch: |-
+      - op: replace
+        path: /data/LLM_PROVIDER
+        value: stub
+      - op: replace
+        path: /data/CORPUS_DIR
+        value: /fixtures
+      - op: replace
+        path: /data/RELEVANCE_FLOOR
+        value: "0.20"
