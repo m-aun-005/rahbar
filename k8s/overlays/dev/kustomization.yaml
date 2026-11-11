@@ -27,5 +27,18 @@ patches:
         path: /data/CORPUS_DIR
         value: /fixtures
       - op: replace
+        path: /data/CHROMA_HOST
+        value: dev-chroma
+      - op: replace
+        path: /data/REDIS_HOST
+        value: dev-redis
+      - op: replace
         path: /data/RELEVANCE_FLOOR
         value: "0.20"
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: api-hpa
+    patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 1
