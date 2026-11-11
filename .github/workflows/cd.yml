@@ -91,10 +91,19 @@ jobs:
               -e "s#image: rahbar-ui:dev#image: ${{ secrets.DOCKERHUB_USERNAME }}/rahbar-ui:${{ github.sha }}#g" \
               -e "s#CORPUS_DIR: /corpus#CORPUS_DIR: /fixtures#g" \
               -e "s#LLM_PROVIDER: ollama-host#LLM_PROVIDER: stub#g" \
+              -e "s#CHROMA_HOST: chroma#CHROMA_HOST: prod-chroma#g" \
+              -e "s#REDIS_HOST: redis#REDIS_HOST: prod-redis#g" \
             | kubectl apply -f -
+
+      - name: Wait for data services
+        run: |
+          kubectl rollout status statefulset/prod-chroma -n rahbar --timeout=180s
+          kubectl rollout status deployment/prod-redis -n rahbar --timeout=180s
 
       - name: Wait for indexer Job
         run: |
+          kubectl delete job/prod-indexer -n rahbar --ignore-not-found
+          kubectl create job --from=cronjob/prod-reindex prod-indexer -n rahbar
           kubectl wait --for=condition=complete job/prod-indexer -n rahbar --timeout=180s
 
       - name: Wait for API rollout status
