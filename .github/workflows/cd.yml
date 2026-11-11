@@ -54,7 +54,11 @@ jobs:
       - name: Build and Push Indexer image
         uses: docker/build-push-action@v5
         with:
-          context: indexer
+          # The CD smoke deployment indexes the versioned fixture corpus. The
+          # real corpus is downloaded separately and is intentionally ignored
+          # by Git, so it must not be assumed to exist on a GitHub runner.
+          context: .
+          file: indexer/Dockerfile.ci
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/rahbar-indexer:${{ github.sha }}
 
@@ -85,7 +89,13 @@ jobs:
               -e "s#image: rahbar-api:dev#image: ${{ secrets.DOCKERHUB_USERNAME }}/rahbar-api:${{ github.sha }}#g" \
               -e "s#image: rahbar-indexer:dev#image: ${{ secrets.DOCKERHUB_USERNAME }}/rahbar-indexer:${{ github.sha }}#g" \
               -e "s#image: rahbar-ui:dev#image: ${{ secrets.DOCKERHUB_USERNAME }}/rahbar-ui:${{ github.sha }}#g" \
+              -e "s#CORPUS_DIR: /corpus#CORPUS_DIR: /fixtures#g" \
+              -e "s#LLM_PROVIDER: ollama-host#LLM_PROVIDER: stub#g" \
             | kubectl apply -f -
+
+      - name: Wait for indexer Job
+        run: |
+          kubectl wait --for=condition=complete job/prod-indexer -n rahbar --timeout=180s
 
       - name: Wait for API rollout status
         run: |
