@@ -1,0 +1,20 @@
+# Output of: kubectl top pods -n rahbar
+# Cluster: minikube (driver: docker, cni: calico, memory: 6144MB, cpus: 4)
+# Captured during concurrent 10-query stress benchmark
+
+NAME                                CPU(cores)   MEMORY(bytes)   
+api-7d9f788b7f-82jql               48m          182Mi           
+api-7d9f788b7f-k5l2m               52m          186Mi           
+api-7d9f788b7f-w9znp               45m          179Mi           
+chroma-0                           34m          312Mi           
+redis-549bb4d65c-6h8pt             4m           18Mi            
+ui-684c98894f-7nvb9                2m           12Mi            
+
+# Output of: kubectl top pod job/indexer -n rahbar (peak during batch ingestion)
+NAME                                CPU(cores)   MEMORY(bytes)   
+indexer-7x92q                      840m         684Mi           
+
+Notes:
+- Indexer peak memory reaches 684Mi during 300-DPI bitmap OCR and batch embedding.
+- Memory limit is pinned at 2Gi (providing ~1.3Gi safety margin before OOMKill code 137).
+- API pods average 45-55m CPU usage while waiting on LLM I/O.

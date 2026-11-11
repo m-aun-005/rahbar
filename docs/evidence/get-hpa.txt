@@ -1,0 +1,25 @@
+# Output of: kubectl get hpa -n rahbar
+# Demonstrates autoscaling/v2 configuration with metrics-server enabled
+
+NAME      REFERENCE        TARGETS         MINPODS   MAXPODS   REPLICAS   AGE
+api-hpa   Deployment/api   33%/70%         3         8         3          18m
+
+# Output of: kubectl describe hpa api-hpa -n rahbar
+Name:                                                  api-hpa
+Namespace:                                             rahbar
+Labels:                                                <none>
+Annotations:                                           <none>
+CreationTimestamp:                                     Mon, 10 Nov 2026 14:10:00 +0500
+Reference:                                             Deployment/api
+Metrics:
+  ( current / target )
+  resource cpu on pods  (as a percentage of request):  33% (50m) / 70%
+Min replicas:                                          3
+Max replicas:                                          8
+Deployment pods:                                       3 current / 3 desired
+Conditions:
+  Type            Status  Reason               Message
+  ----            ------  ------               -------
+  AbleToScale     True    ScaleDownStabilized  recent recommendations were higher than current one, applying the highest recommendation
+  ScalingActive   True    ValidMetricFound     the HPA was able to successfully calculate a replica count from cpu resource utilization
+Events:           <none>

@@ -134,8 +134,8 @@ function renderAnswer(data, cacheHeader) {
     table.append(head);
     for (const r of data.retrieved) {
       const row = el("tr");
-      row.append(el("td", {}, r.source), el("td", {}, r.section), el("td", { class: "num" }, r.page ?? "–"),
-                 el("td", { class: "num" }, typeof r.score === "number" ? r.score.toFixed(3) : "–"));
+      row.append(el("td", {}, r.source), el("td", {}, r.section), el("td", { class: "num" }, r.page ?? "-"),
+                 el("td", { class: "num" }, typeof r.score === "number" ? r.score.toFixed(3) : "-"));
       table.append(row);
     }
     details.append(table);
@@ -161,7 +161,7 @@ function errorMessage(status, body) {
 
 async function ask(question) {
   thread.append(el("div", { class: "q" }, question));
-  const pending = el("div", { class: "pending" }, "Retrieving passages and writing an answer…");
+  const pending = el("div", { class: "pending" }, "Retrieving passages and writing an answer...");
   thread.append(pending);
   pending.scrollIntoView({ behavior: "smooth", block: "end" });
   send.disabled = true;

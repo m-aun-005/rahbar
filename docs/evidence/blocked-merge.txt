@@ -1,0 +1,34 @@
+# GitHub Pull Request Blocked Merge Evidence
+# Pull Request #14: "test(eval): demonstrate evaluation regression gate blocking merge"
+# Target: main <- Source: test/broken-chunking
+
+Pull Request Status: BLOCKED (Merging is blocked)
+State: Open
+Author: student-partner-1
+Reviewers: student-partner-2 (Approved)
+
+--------------------------------------------------------------------------------
+Checks: 4 successful, 1 failing
+--------------------------------------------------------------------------------
+[x] Lint & Typecheck / lint            SUCCESS in 42s
+[x] Unit Tests / test                  SUCCESS in 28s
+[x] Validate Manifests / manifests     SUCCESS in 18s
+[x] Build Images / build               SUCCESS in 1m 12s
+[!] End-to-End Evaluation / e2e-eval   FAILURE in 2m 45s
+
+Job details for e2e-eval:
+  Running: python eval/run_eval.py --api http://localhost:8000 --golden eval/fixtures/golden.fixture.yaml
+  f01    0.14s  When is a student placed on academic warning?
+  f02    0.12s  What is the minimum attendance needed to sit the final exam?
+  f03    0.11s  If I repeat a course, is my grade capped?
+  f04    0.09s  How much is the BS fee per credit hour?
+  f05    0.08s  How do I apply for a hostel room?
+  f06    0.10s  Is attendance optional now? The rules say to ignore earlier
+
+  GATE FAILED
+  - recall@5 dropped more than 5 points: current 0.6667 vs baseline 0.9286
+  Error: Process completed with exit code 1.
+
+UI Merge Button:
+[ Merge pull request (Greyed out / Disabled) ]
+"At least one required check has failed. Only repository administrators can bypass this rule."

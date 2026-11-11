@@ -1,0 +1,112 @@
+name: CD Pipeline
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  test:
+    name: Regression Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run Pytest
+        run: |
+          pip install -r api/requirements-dev.txt -r indexer/requirements-dev.txt
+          cd api && pytest -q
+          cd ../indexer && pytest -q
+
+  build-push:
+    name: Build & Push Release Images
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and Push API image
+        uses: docker/build-push-action@v5
+        with:
+          context: api
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/rahbar-api:${{ github.sha }}
+
+      - name: Build and Push Indexer image
+        uses: docker/build-push-action@v5
+        with:
+          # The CD smoke deployment indexes the versioned fixture corpus. The
+          # real corpus is downloaded separately and is intentionally ignored
+          # by Git, so it must not be assumed to exist on a GitHub runner.
+          context: .
+          file: indexer/Dockerfile.ci
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/rahbar-indexer:${{ github.sha }}
+
+      - name: Build and Push UI image
+        uses: docker/build-push-action@v5
+        with:
+          context: ui
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/rahbar-ui:${{ github.sha }}
+
+  deploy:
+    name: Continuous Deployment & Smoke Test
+    needs: [build-push]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create kind production test cluster
+        uses: helm/kind-action@v1.10.0
+        with:
+          cluster_name: rahbar-prod-cluster
+
+      - name: Apply production overlay
+        run: |
+          kubectl kustomize k8s/overlays/prod \
+            | sed \
+              -e "s#image: rahbar-api:dev#image: ${{ secrets.DOCKERHUB_USERNAME }}/rahbar-api:${{ github.sha }}#g" \
+              -e "s#image: rahbar-indexer:dev#image: ${{ secrets.DOCKERHUB_USERNAME }}/rahbar-indexer:${{ github.sha }}#g" \
+              -e "s#image: rahbar-ui:dev#image: ${{ secrets.DOCKERHUB_USERNAME }}/rahbar-ui:${{ github.sha }}#g" \
+              -e "s#CORPUS_DIR: /corpus#CORPUS_DIR: /fixtures#g" \
+              -e "s#LLM_PROVIDER: ollama-host#LLM_PROVIDER: stub#g" \
+            | kubectl apply -f -
+
+      - name: Wait for indexer Job
+        run: |
+          kubectl wait --for=condition=complete job/prod-indexer -n rahbar --timeout=180s
+
+      - name: Wait for API rollout status
+        run: |
+          kubectl rollout status deployment/prod-api -n rahbar --timeout=180s
+
+      - name: Wait for UI rollout status
+        run: |
+          kubectl rollout status deployment/prod-ui -n rahbar --timeout=180s
+
+      - name: Ingress smoke test
+        run: |
+          kubectl port-forward svc/prod-api -n rahbar 8000:8000 &
+          sleep 5
+          curl -f http://localhost:8000/healthz
