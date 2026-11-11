@@ -33,6 +33,9 @@ patches:
         path: /data/REDIS_HOST
         value: dev-redis
       - op: replace
+        path: /data/OLLAMA_URL
+        value: http://host.docker.internal:11434
+      - op: replace
         path: /data/RELEVANCE_FLOOR
         value: "0.20"
   - target:
