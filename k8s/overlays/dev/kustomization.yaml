@@ -22,7 +22,7 @@ patches:
     patch: |-
       - op: replace
         path: /data/LLM_PROVIDER
-        value: stub
+        value: ollama-host
       - op: replace
         path: /data/CORPUS_DIR
         value: /fixtures
